@@ -1,0 +1,10 @@
+{
+    "dev": {
+        "app_function": "app.app",
+		"aws_region": "us-east-1",
+        "profile_name": null,
+        "project_name": "gianini-app-ser",
+        "runtime": "python3.8",
+        "s3_bucket": "zappa-gianini-service"
+    }
+}

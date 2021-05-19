@@ -1,0 +1,15 @@
+requests==2.24.0
+schedule==0.6.0
+python_firebase==1.2
+firebase==3.0.1
+Werkzeug==0.16.1
+Flask
+Flask-RESTful
+zappa
+boto3
+AWS
+python_jwt
+gcloud
+sseclient
+pycryptodome
+ConfigParser

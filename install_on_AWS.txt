@@ -1,0 +1,18 @@
+install Zappa, VirtualEnv and AWScli
+
+1 - Go to dynamoDB_API
+
+2 - Create a virtualEnv
+	- virtualenv {nameOfEnv}
+
+3 - Initialize VirtualEnv
+	- source {nameOfEnv}\Scripts\activate
+
+4 - Install all requirements, include Zappa
+	- pip install -r requirements.txt
+
+5 - Initialize Zappa
+	- Zappa init ---> Follow steps
+
+6 - Deploy to AWS
+	- Zappa deploy {dev}
