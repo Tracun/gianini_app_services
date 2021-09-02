@@ -1,8 +1,8 @@
-requests==2.24.0
-schedule==0.6.0
-python_firebase==1.2
-firebase==3.0.1
-Werkzeug==0.16.1
+requests
+schedule
+python_firebase
+firebase
+Werkzeug
 Flask
 Flask-RESTful
 zappa
@@ -13,3 +13,5 @@ gcloud
 sseclient
 pycryptodome
 ConfigParser
+troposphere<3
+requests_toolbelt

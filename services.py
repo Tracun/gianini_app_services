@@ -1,12 +1,11 @@
 import datetime
-import schedule
 import json
-import time
 import requests
 import sys
 import urllib.parse
 import configparser
 from firebase import firebase
+
 
 class Services:
 
@@ -18,6 +17,7 @@ class Services:
         self.gianiniToken = ""
         self.devPhone = ""
         self.devToken = ""
+        self.version = "v1.0.0"
         self.readConfig()
 
     def readConfig(self):
@@ -25,8 +25,16 @@ class Services:
         parser.read_file(open(r'config.txt'))
         self.gianiniPhone = parser.get('config', 'gianiniPhone')
         self.gianiniToken = parser.get('config', 'gianiniToken')
+
         self.devPhone = parser.get('config', 'devPhone')
         self.devToken = parser.get('config', 'devToken')
+
+        self.vitorPhone = parser.get('config', 'vitorPhone')
+        self.vitorToken = parser.get('config', 'vitorToken')
+
+        self.amadeuPhone = parser.get('config', 'amadeuPhone')
+        self.amadeuToken = parser.get('config', 'amadeuToken')
+        
 
     def getAllSchedules(self):
         try:
@@ -46,22 +54,59 @@ class Services:
 
     def diffBetweenDates(self, date):
         date = self.convertStr2Date(str(date))
-        return (date - datetime.datetime.now()).days
+        nowDate = datetime.datetime(datetime.datetime.now(
+        ).year, datetime.datetime.now().month, datetime.datetime.now().day, 0, 0, 0)
+        return (date - nowDate).days
 
-    def checkPreventivaSchedule(self):
+    def checkPreventivaScheduleCloseToDueDate(self, to):
 
         scheduleList = self.getAllSchedules()
+        count = 0
+        message = "*##### Verifique as PREVENTIVAS abaixo - {0}/{1}/{2} #####*\n\n".format(
+            datetime.datetime.now().day, datetime.datetime.now().month, datetime.datetime.now().year)
 
         for key, schedules in scheduleList.items():
             diff = self.diffBetweenDates(schedules["date"])
-            if diff > 0 and diff < 2:
-                print("ENVIANDO EMAIL/SMS ...")
+            status = schedules["status"]
+
+            if status == "Agendado":
+                if diff < 0:
+                    dueDate = self.convertStr2Date(schedules["date"])
+                    count += 1
+                    message += "{0} - *_(❌ATRASADO)_* - Preventiva no hospital *{1}* no dia *{2}/{3}/{4}* - *OBS: {5}*\n\n".format(
+                        count, schedules["hospitalName"], dueDate.day, dueDate.month, dueDate.year, schedules["obs"])
+                elif diff == 0:
+                    dueDate = self.convertStr2Date(schedules["date"])
+                    count += 1
+                    message += "{0} - *_(⚠️HOJE)_* - Preventiva no hospital *{1}* no dia *{2}/{3}/{4}* - *OBS: {5}*\n\n".format(
+                        count, schedules["hospitalName"], dueDate.day, dueDate.month, dueDate.year, schedules["obs"])
+                elif diff == 1:
+                    dueDate = self.convertStr2Date(schedules["date"])
+                    count += 1
+                    message += "{0} - *_(😉AMANHÃ)_* - Preventiva no hospital *{1}* no dia *{2}/{3}/{4}* - *OBS: {5}*\n\n".format(
+                        count, schedules["hospitalName"], dueDate.day, dueDate.month, dueDate.year, schedules["obs"])
+
+        if count == 0:
+            message += "Nenhuma preventiva pendente para o dia de hoje - {0}/{1}/{2}".format(
+                datetime.datetime.now().day, datetime.datetime.now().month, datetime.datetime.now().year)
+        message = urllib.parse.quote(message)
+
+        if to == None or to == 'dev':
+            return self.sendWhatsappMessage(message, self.devPhone, self.devToken)
+        elif to == "all":
+            self.sendWhatsappMessage(message, self.devPhone, self.devToken)
+            self.sendWhatsappMessage(message, self.vitorPhone, self.vitorToken)
+            self.sendWhatsappMessage(message, self.amadeuPhone, self.amadeuToken)
+            return self.sendWhatsappMessage(message, self.gianiniPhone, self.gianiniToken)
+        elif to == "gianini":
+            return self.sendWhatsappMessage(message, self.gianiniPhone, self.gianiniToken)
+        return None
 
     def checkExpensesCloseToDueDate(self, to):
 
         expensesList = self.getAllExpenses()
         count = 0
-        message = "*##### As despesas abaixo que estão com o status de 'Pendente', vencidas e/ou próximas do vencimento - {0}/{1}/{2} #####*\n\n".format(
+        message = "*##### As DESPESAS abaixo que estão com o status de 'Pendente', vencidas e/ou próximas do vencimento - {0}/{1}/{2} #####*\n\n".format(
             datetime.datetime.now().day, datetime.datetime.now().month, datetime.datetime.now().year)
 
         for key, expense in expensesList.items():
@@ -128,14 +173,14 @@ class Services:
         self.sendWhatsappMessage(
             "{0} - {1}".format(datetime.datetime.now(), message), self.devPhone, self.devToken)
 
+
 def main():
-    ("Executando serviço ...")
     services = Services()
     try:
-        services.log("Executando serviço ...")
+        services.log("Executando serviço {0} ...".format(services.version))
 
-        # services.checkPreventivaSchedule()
-        res = services.checkExpensesCloseToDueDate(to="dev")
+        # res = services.checkExpensesCloseToDueDate(to="dev")
+        res = services.checkPreventivaScheduleCloseToDueDate(to="dev")
 
         services.log("Execução finalizada ...")
 
@@ -143,27 +188,13 @@ def main():
         # services.sendErrorMessage("Erro main: " + str(e))
         services.log("Erro main: " + str(e))
 
-
-if __name__ == "__main__":
-    try:
-        print("Serviço iniciado ...")
-        # schedule.every(10).seconds.do(main)
-        main()
-
-        # while True:
-        #     schedule.run_pending()
-        #     time.sleep(1)
-    except Exception as e:
-        print("Erro ao executar serviço: " + str(e))
-        sys.exit()
-
 def lambda_handler(event, context):
-    print("Executando serviço ...")
     try:
         services = Services()
-        services.log("Executando serviço ...")
+        services.log("Executando serviço {0} ...".format(services.version))
 
         res = services.checkExpensesCloseToDueDate(event['to'])
+        res = services.checkPreventivaScheduleCloseToDueDate(event['to'])
 
         services.log("Execução finalizada ...")
 
@@ -179,3 +210,16 @@ def lambda_handler(event, context):
     except Exception as e:
         services.sendErrorMessage("Erro main: " + str(e))
         services.log("Erro main: " + str(e))
+
+if __name__ == "__main__":
+    try:
+        print("Serviço iniciado ...")
+        # schedule.every(10).seconds.do(main)
+        main()
+        # lambda_handler({"to":"dev"}, None)
+        # while True:
+        #     schedule.run_pending()
+        #     time.sleep(1)
+    except Exception as e:
+        print("Erro ao executar serviço: " + str(e))
+        sys.exit()
