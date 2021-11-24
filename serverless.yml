@@ -1,4 +1,4 @@
-service: gianini-app-ser
+service: gianini-app-ser-dev
 
 provider:
   name: aws
@@ -7,7 +7,6 @@ provider:
   region: us-east-1
   deploymentBucket:
     blockPublicAccess: true # Prevents public access via ACLs or bucket policies. Default is false
-    skipPolicySetup: false # Prevents creation of default bucket policy when framework creates the deployment bucket. Default is false
     name: zappa-gianini-service
 
 plugins:
@@ -18,10 +17,10 @@ package:
 
 functions:
   theLambda:
-    name: gianini-app-ser
+    name: gianini-app-ser-dev
     handler: app.app
-    description: gianini-app-ser
-    timeout: 6 # seconds
+    description: gianini-app-ser-dev
+    timeout: 5 # seconds
     memorySize: 128 # mb
     package:
       patterns:
