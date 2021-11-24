@@ -66,7 +66,7 @@ jobs:
         run: npm install
 
       - name: Serverless Deploy
-        uses: dhollerbach/github-action-serverless-with-python-requirements@master
+        uses: Tracun/gianini_app_services@master
         env:
           # SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
           # or if using AWS credentials directly
