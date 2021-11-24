@@ -17,7 +17,7 @@ class Services:
         self.gianiniToken = ""
         self.devPhone = ""
         self.devToken = ""
-        self.version = "v1.0.0"
+        self.version = "v1.0.1"
         self.readConfig()
 
     def readConfig(self):
@@ -91,6 +91,9 @@ class Services:
                 datetime.datetime.now().day, datetime.datetime.now().month, datetime.datetime.now().year)
         message = urllib.parse.quote(message)
 
+        return self.sendMessagePreventiva(to, message)
+
+    def sendMessagePreventiva(self, to, message):
         if to == None or to == 'dev':
             return self.sendWhatsappMessage(message, self.devPhone, self.devToken)
         elif to == "all":
@@ -100,6 +103,7 @@ class Services:
             return self.sendWhatsappMessage(message, self.gianiniPhone, self.gianiniToken)
         elif to == "gianini":
             return self.sendWhatsappMessage(message, self.gianiniPhone, self.gianiniToken)
+        
         return None
 
     def checkExpensesCloseToDueDate(self, to):
@@ -119,22 +123,45 @@ class Services:
                     count += 1
                     message += "{0} - *_(❌VENCIDO)_* - *{1}({2})* com o valor de *R$ {3}* e vencimento em *{4}/{5}/{6}* - *{7}*\n\n".format(
                         count, expense["description"], expense["obs"], expense["value"], dueDate.day, dueDate.month, dueDate.year, expense["type"])
+                    
+                    # Envia de 5 em 5 mensagens, para evitar corte
+                    if count % 5 == 0:
+                        message = urllib.parse.quote(message)
+                        self.sendMessageExpenses(to, message)
+                        message = ""
+
                 elif diff == 0:
                     dueDate = self.convertStr2Date(expense["dueDate"])
                     count += 1
                     message += "{0} -  *_(⚠️HOJE)_* - *{1}({2})* com o valor de *R$ {3}* e vencimento em *{4}/{5}/{6}* - *{7}*\n\n".format(
                         count, expense["description"], expense["obs"], expense["value"], dueDate.day, dueDate.month, dueDate.year, expense["type"])
+                    
+                    # Envia de 5 em 5 mensagens, para evitar corte
+                    if count % 5 == 0:
+                        message = urllib.parse.quote(message)
+                        self.sendMessageExpenses(to, message)
+                        message = ""
+
                 elif diff < 2:
                     dueDate = self.convertStr2Date(expense["dueDate"])
                     count += 1
                     message += "{0} - *{1}({2})* com o valor de *R$ {3}* e vencimento em *{4}/{5}/{6}* - *{7}*\n\n".format(
                         count, expense["description"], expense["obs"], expense["value"], dueDate.day, dueDate.month, dueDate.year, expense["type"])
+                    
+                    # Envia de 5 em 5 mensagens, para evitar corte
+                    if count % 5 == 0:
+                        message = urllib.parse.quote(message)
+                        self.sendMessageExpenses(to, message)
+                        message = ""
 
         if count == 0:
             message += "Nenhum despesa pendente para o dia de hoje - {0}/{1}/{2}".format(
                 datetime.datetime.now().day, datetime.datetime.now().month, datetime.datetime.now().year)
         message = urllib.parse.quote(message)
 
+        return self.sendMessageExpenses(to, message)
+
+    def sendMessageExpenses(self, to, message):
         if to == None or to == 'dev':
             return self.sendWhatsappMessage(message, self.devPhone, self.devToken)
         elif to == "all":
@@ -179,8 +206,8 @@ def main():
     try:
         services.log("Executando serviço {0} ...".format(services.version))
 
-        # res = services.checkExpensesCloseToDueDate(to="dev")
-        res = services.checkPreventivaScheduleCloseToDueDate(to="dev")
+        res = services.checkExpensesCloseToDueDate(to="dev")
+        # res = services.checkPreventivaScheduleCloseToDueDate(to="dev")
 
         services.log("Execução finalizada ...")
 
@@ -215,8 +242,8 @@ if __name__ == "__main__":
     try:
         print("Serviço iniciado ...")
         # schedule.every(10).seconds.do(main)
-        main()
-        # lambda_handler({"to":"dev"}, None)
+        # main()
+        lambda_handler({"to":"dev"}, None)
         # while True:
         #     schedule.run_pending()
         #     time.sleep(1)
