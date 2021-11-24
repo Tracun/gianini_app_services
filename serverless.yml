@@ -5,6 +5,10 @@ provider:
   runtime: python3.8
   stage: dev
   region: us-east-1
+  deploymentBucket:
+    blockPublicAccess: true # Prevents public access via ACLs or bucket policies. Default is false
+    skipPolicySetup: false # Prevents creation of default bucket policy when framework creates the deployment bucket. Default is false
+    name: zappa-gianini-service
 
 plugins:
   - serverless-python-requirements
