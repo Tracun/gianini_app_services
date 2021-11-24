@@ -1,4 +1,4 @@
-name: Deploy Python Lambda
+name: Deploy Python to AWS Lambda
 
 on:
   push:
