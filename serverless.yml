@@ -1,4 +1,4 @@
-service: gianini-app-ser
+service: gianini-app-ser-dev
 
 provider:
   name: aws
@@ -17,7 +17,7 @@ package:
 
 functions:
   theLambda:
-    name: gianini-app-ser
+    name: gianini-app-ser-dev
     handler: app.app
     description: gianini-app-ser-dev
     package:
