@@ -1,4 +1,4 @@
-service: gianini_app_services
+service: gianini-app-ser
 
 provider:
   name: aws
