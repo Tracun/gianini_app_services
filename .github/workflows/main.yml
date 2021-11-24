@@ -1,68 +1,74 @@
-# ******************************************************** #
-# V2 of the AWS Lambda Deploy workflow adds caching the Docker image on AWS ECR so
-# subsequent runs of the workflow doesn't require rebuilding the image from scratch.
-# The Dockerfile is simple in this example, but a more production-grade Dockerfile
-# with linux packages to install, a lengthier requirements.txt file, etc. will
-# benenfit greatly from image caching.
-# ******************************************************** #
-
-name: AWS Lambda Deploy V2
+name: Deploy Python Lambda
 
 on:
   push:
-    branches: [ master, main ]
-  pull_request:
-    branches: [ master, main ]
-  workflow_dispatch:  # trigger manually
+    branches:
+      - main
 
 jobs:
-  build:
-
+  deploy:
+    name: deploy
     runs-on: ubuntu-latest
     env:
-      ECR_IMAGE_TAG: latest
-      AWS_DEFAULT_REGION: us-east-1
-      AWS_LAMBDA_FUNC_NAME: app.app
-      AWS_ECR_REPOSITORY_NAME: gianini-app-ser
-
+      NODE_VERSION: 14.x # used for installing the serverless-python-requirements dependency from NPM
+    strategy:
+      matrix:
+        python-version:
+          - 3.8 # with a build matrix, you can specify a list of python versions to deploy with
     steps:
-    - name: checkout
-      uses: actions/checkout@v2
+      # --------- use Python to install Python dependencies and run linter, tests, etc. ---------
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          # This path is specific to Ubuntu
+          path: ~/.cache/pip
+          # Look to see if there is a cache hit for the corresponding requirements file
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            ${{ runner.os }}-
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      # --------- Use Node and NPM to install serverless-python-requirements ---------
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Install Node dependencies (specifically, serverless-python-requirements)
+        run: npm install
 
-    - name: Build, tag, and push image to Amazon ECR
-      id: build-deploy-image
-      uses: whoan/docker-build-with-cache-action@v5
-      with:
-        username: "${{ secrets.AWS_ACCESS_KEY_ID }}"
-        password: "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
-        registry: ${{ steps.login-ecr.outputs.registry }}
-        image_name: ${{ env.AWS_ECR_REPOSITORY_NAME }}
-        build_extra_args: >-
-          --build-arg WEATHER_API_KEY=${{ secrets.WEATHER_API_KEY }}
-          --build-arg AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
-          --build-arg AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          --build-arg AWS_DEFAULT_REGION=${{ env.AWS_DEFAULT_REGION }}
-          --build-arg EMAIL_USER=${{ secrets.EMAIL_USER }}
-          --build-arg EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}
-        push_image_and_stages: true
-    
-    - name: Deploy to AWS Lambda
-      run: |
-        aws lambda update-function-code \
-        --function-name ${{ env.AWS_LAMBDA_FUNC_NAME }} \
-        --image-uri "${{ secrets.AWS_ECR_IMAGE_URI }}:${{ env.ECR_IMAGE_TAG }}"
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_DEFAULT_REGION: ${{ env.AWS_DEFAULT_REGION }}
+      - name: Serverless Deploy
+        uses: dhollerbach/github-action-serverless-with-python-requirements@master
+        env:
+          # SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+          # or if using AWS credentials directly
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
