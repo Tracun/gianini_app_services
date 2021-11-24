@@ -1,4 +1,4 @@
-service: gianini-app-ser-dev
+service: gianini-app-ser
 
 provider:
   name: aws
@@ -17,11 +17,9 @@ package:
 
 functions:
   theLambda:
-    name: gianini-app-ser-dev
+    name: gianini-app-ser
     handler: app.app
     description: gianini-app-ser-dev
-    timeout: 5 # seconds
-    memorySize: 128 # mb
     package:
       patterns:
         - "!node_modules/**"
