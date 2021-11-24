@@ -17,7 +17,7 @@ functions:
     name: gianini-app-ser
     handler: app.app
     description: gianini-app-ser
-    timeout: 5 # seconds
+    timeout: 6 # seconds
     memorySize: 128 # mb
     package:
       patterns:
