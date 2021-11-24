@@ -20,8 +20,6 @@ functions:
     name: gianini-app-ser-dev
     handler: app.app
     description: gianini-app-ser-dev
-    timeout: 5 # seconds
-    memorySize: 128 # mb
     package:
       patterns:
         - "!node_modules/**"
