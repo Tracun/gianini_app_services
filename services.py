@@ -17,7 +17,7 @@ class Services:
         self.gianiniToken = ""
         self.devPhone = ""
         self.devToken = ""
-        self.version = "v1.0.1"
+        self.version = "v1.0.2"
         self.readConfig()
 
     def readConfig(self):
@@ -116,8 +116,13 @@ class Services:
         for key, expense in expensesList.items():
             diff = self.diffBetweenDates(expense["dueDate"])
             status = expense["status"]
+            
+            if "isDeleted" in expense: 
+                isDeleted = expense["isDeleted"]
+            else:
+                isDeleted = False
 
-            if status != "Pago":
+            if status != "Pago" and (isDeleted == None or isDeleted == False):
                 if diff < 0:
                     dueDate = self.convertStr2Date(expense["dueDate"])
                     count += 1
@@ -219,6 +224,7 @@ def lambda_handler(event, context):
     try:
         services = Services()
         services.log("Executando serviço {0} ...".format(services.version))
+        # services.log("event['to'] = {0} ...".format(event['to']))
 
         res = services.checkExpensesCloseToDueDate(event['to'])
         res = services.checkPreventivaScheduleCloseToDueDate(event['to'])
